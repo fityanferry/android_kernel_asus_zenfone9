@@ -1,0 +1,130 @@
+name: Build Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git git-lfs gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev adb fastboot pigz python3-dev swig
+
+    - name: Set up build environment
+      run: |
+        mkdir kernel_build_tools
+        cd kernel_build_tools
+
+        # clang
+        wget https://mirrors.edge.kernel.org/pub/tools/llvm/files/llvm-19.1.6-x86_64.tar.gz
+        tar -xvzf llvm-19.1.6-x86_64.tar.gz
+
+        # dtc
+        git clone https://github.com/ASUS-SM8475/platform_external_dtc.git
+        cd platform_external_dtc/
+        make
+        export PATH="/home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/platform_external_dtc:$PATH"
+        cd ..
+
+        # mkbootimg
+        mkdir mkbootimg
+        cd mkbootimg/
+        wget https://android.googlesource.com/platform/system/tools/mkbootimg/+archive/d2bb0af5ba6d3198a3e99529c97eda1be0b5a093.tar.gz
+        tar -xvzf d2bb0af5ba6d3198a3e99529c97eda1be0b5a093.tar.gz
+        export PATH="/home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/mkbootimg:$PATH"
+        cd ..
+
+        # mkdtimg
+        git clone https://github.com/affggh/mkdtimg.git
+        cd mkdtimg
+        export PATH="/home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/llvm-19.1.6-x86_64/bin:$PATH"
+        make
+
+        #env
+        export PATH="/home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/mkdtimg:$PATH"
+        export CC="clang"
+        export CLANG_TRIPLE="aarch64-linux-gnu-"
+        export CROSS_COMPILE="aarch64-linux-gnu-"
+        export CROSS_COMPILE_ARM32="arm-linux-gnueabi-"
+        export ARCH="arm64"
+
+    - name: add KSU
+      run: |
+        cd /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+
+    - name: Copy and edit additional KSU files
+      run: |
+        cd /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9
+        rm defconfig
+        wget https://raw.githubusercontent.com/fityanferry/defconfig/refs/heads/main/defconfig
+        cd drivers/input/
+        rm input.c
+        wget https://raw.githubusercontent.com/fferry98/android_kernel_asus_zenfone9/refs/heads/test/drivers/input/input.c
+        cd ../../drivers/tty/
+        rm pty.c
+        wget https://raw.githubusercontent.com/fferry98/android_kernel_asus_zenfone9/refs/heads/test/drivers/tty/pty.c
+        cd ../../fs/
+        rm exec.c open.c read_write.c stat.c
+        wget https://raw.githubusercontent.com/fferry98/android_kernel_asus_zenfone9/refs/heads/test/fs/exec.c
+        wget https://raw.githubusercontent.com/fferry98/android_kernel_asus_zenfone9/refs/heads/test/fs/open.c
+        wget https://raw.githubusercontent.com/fferry98/android_kernel_asus_zenfone9/refs/heads/test/fs/read_write.c
+        wget https://raw.githubusercontent.com/fferry98/android_kernel_asus_zenfone9/refs/heads/test/fs/stat.c
+ 
+    - name: Add Susfs
+      run: |
+        cd /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9
+        git clone --single-branch --branch gki-android12-5.10 https://gitlab.com/simonpunk/susfs4ksu.git
+        cp susfs4ksu/kernel_patches/50_add_susfs_in_gki-android12-5.10.patch .
+        cp susfs4ksu/kernel_patches/fs/* fs/
+        cp susfs4ksu/kernel_patches/include/linux/* include/linux/
+        cd /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/KernelSU-Next
+        wget https://raw.githubusercontent.com/fferry98/patch-kernel/refs/heads/main/latest.patch
+        echo ""
+        echo "## ADD SUSFS TO KERNELSU-NEXT"
+        patch -p1 < latest.patch
+        cd /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9
+        echo ""
+        echo "## ADD SUSFS TO KERNEL GKI"
+        patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
+
+    - name: Fix selinux rules.c
+      run: |
+        sed -i '/LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))/d' drivers/kernelsu/selinux/rules.c
+        sed -i 's/((!defined(KSU_COMPAT_USE_SELINUX_STATE)) || \\/1/' drivers/kernelsu/selinux/rules.c
+
+    - name: Edit Makefile
+      run: |
+        sed -i 's|override LLVM_PATH := /home/arter97/android/nathan/llvm-19.1.6-x86_64/bin/|override LLVM_PATH := /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/llvm-19.1.6-x86_64/bin/|g' Makefile
+
+    - name: Create set_paths.sh
+      run: |
+        echo 'export PATH="$HOME/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/platform_external_dtc:$PATH"' >> set_paths.sh
+        echo 'export PATH="$HOME/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/mkdtimg:$PATH"' >> set_paths.sh
+        echo 'export PATH="$HOME/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/mkbootimg:$PATH"' >> set_paths.sh
+        echo 'export PATH="$HOME/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/llvm-19.1.6-x86_64/bin:$PATH"' >> set_paths.sh
+        chmod +x set_paths.sh
+
+    - name: Compile kernel
+      id: compile
+      run: |
+        source set_paths.sh
+        chmod +x build_kernel.sh
+        ./build_kernel.sh -j$(nproc --all)
+        ls -al arter97-kernel-$(cat version)-boot.img
+        sha256sum boot.img
+        sha256sum arter97-kernel*.img
+        kernelName=`ls arter97-kernel*.img` && echo "kernelName=$kernelName" >> $GITHUB_OUTPUT
+        shortHash=`sha256sum arter97-kernel*.img | cut -c1-8` && echo "shortHash=$shortHash" >> $GITHUB_OUTPUT
+
+    - name: Upload kernel files as pages artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.compile.outputs.kernelName }}-${{ steps.compile.outputs.shortHash }}
+        path: arter97-kernel*.img
