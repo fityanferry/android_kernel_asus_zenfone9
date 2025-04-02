@@ -54,7 +54,7 @@ jobs:
         export CROSS_COMPILE_ARM32="arm-linux-gnueabi-"
         export ARCH="arm64"
 
-    - name: add KSU
+    - name: Add KSU
       run: |
         cd /home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9
         curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
