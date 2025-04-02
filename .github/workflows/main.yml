@@ -118,13 +118,18 @@ jobs:
         chmod +x build_kernel.sh
         ./build_kernel.sh -j$(nproc --all)
         ls -al arter97-kernel-$(cat version)-boot.img
-        sha256sum boot.img
-        sha256sum arter97-kernel*.img
-        kernelName=`ls arter97-kernel*.img` && echo "kernelName=$kernelName" >> $GITHUB_OUTPUT
+        echo ""
+        echo "SETUP UPLOAD AND CHECK INTEGRITY"
+        mkdir upload
+        artifactName=`ls arter97-kernel*.img` && echo "artifactName=$artifactName" >> $GITHUB_OUTPUT
         shortHash=`sha256sum arter97-kernel*.img | cut -c1-8` && echo "shortHash=$shortHash" >> $GITHUB_OUTPUT
+        mv arter97-kernel-$(cat version)-boot.img upload/arter97-kernel-$(cat version)-$shortHash-boot.img
+        mv dtbo.img vendor_boot.img upload/
+        ls -al boot.img upload/*
+        sha256sum boot.img upload/*
 
     - name: Upload kernel files as pages artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.compile.outputs.kernelName }}-${{ steps.compile.outputs.shortHash }}
-        path: arter97-kernel*.img
+        name: ${{ steps.compile.outputs.artifactName }}-${{ steps.compile.outputs.shortHash }}
+        path: upload/*
