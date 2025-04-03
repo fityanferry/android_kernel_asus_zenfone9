@@ -1,4 +1,4 @@
-name: Build Kernel
+name: next branch
 
 on:
   workflow_dispatch:
