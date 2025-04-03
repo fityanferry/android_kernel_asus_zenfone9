@@ -117,7 +117,8 @@ jobs:
         source set_paths.sh
         chmod +x build_kernel.sh
         ./build_kernel.sh -j$(nproc --all)
-        ls -al arter97-kernel-$(cat version)-boot.img
+        ls -al arter97-kernel-$(cat version)-boot.img boot.img dtbo.img vendor_boot.img
+        sha256 arter97-kernel-$(cat version)-boot.img boot.img dtbo.img vendor_boot.img
         echo ""
         echo "SETUP UPLOAD AND CHECK INTEGRITY"
         mkdir upload
@@ -125,11 +126,17 @@ jobs:
         shortHash=`sha256sum arter97-kernel*.img | cut -c1-8` && echo "shortHash=$shortHash" >> $GITHUB_OUTPUT
         mv arter97-kernel-$(cat version)-boot.img upload/arter97-kernel-$(cat version)-$shortHash-boot.img
         mv dtbo.img vendor_boot.img upload/
-        ls -al boot.img upload/*
-        sha256sum boot.img upload/*
+        echo ""
+        echo "THE FILE IN UPLOAD/ FOLDER IS"
+        ls upload/
+        ls -al upload/arter97-kernel*.img boot.img upload/dtbo.img upload/vendor_boot.img
+        sha256sum upload/arter97-kernel*.img boot.img upload/dtbo.img upload/vendor_boot.img
+        cd upload/
+        shortHashLast=`sha256sum arter97-kernel*.img | cut -c1-8` && echo "shortHashLast=$shortHashLast" >> $GITHUB_OUTPUT
+        cd ..
 
     - name: Upload kernel files as pages artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.compile.outputs.artifactName }}-${{ steps.compile.outputs.shortHash }}
+        name: ${{ steps.compile.outputs.artifactName }}-${{ steps.compile.outputs.shortHashLast }}
         path: upload/*
