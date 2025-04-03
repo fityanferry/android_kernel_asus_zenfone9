@@ -118,7 +118,7 @@ jobs:
         chmod +x build_kernel.sh
         ./build_kernel.sh -j$(nproc --all)
         ls -al arter97-kernel-$(cat version)-boot.img boot.img dtbo.img vendor_boot.img
-        sha256 arter97-kernel-$(cat version)-boot.img boot.img dtbo.img vendor_boot.img
+        sha256sum arter97-kernel-$(cat version)-boot.img boot.img dtbo.img vendor_boot.img
         echo ""
         echo "SETUP UPLOAD AND CHECK INTEGRITY"
         mkdir upload
