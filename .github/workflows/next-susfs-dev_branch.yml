@@ -117,7 +117,9 @@ jobs:
         echo ""
         echo "SETUP UPLOAD AND CHECK INTEGRITY"
         mkdir upload
-        artifactName=`ls arter97-kernel*.img` && echo "artifactName=$artifactName" >> $GITHUB_OUTPUT
+        artifactName=`ls arter97-kernel*.img`
+        artifactName="${artifactName%-boot.img}"
+        echo "artifactName=$artifactName" >> $GITHUB_OUTPUT
         shortHash=`sha256sum arter97-kernel*.img | cut -c1-8` && echo "shortHash=$shortHash" >> $GITHUB_OUTPUT
         mv arter97-kernel-$(cat version)-boot.img upload/arter97-kernel-$(cat version)-$shortHash-boot.img
         mv dtbo.img vendor_boot.img upload/
