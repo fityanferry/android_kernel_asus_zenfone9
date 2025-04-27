@@ -28,8 +28,7 @@ jobs:
         # dtc
         git clone https://github.com/ASUS-SM8475/platform_external_dtc.git
         cd platform_external_dtc/
-        sed -i 's/^CC ?= gcc/CC := clang/' Makefile
-        sed -i 's/^HOSTCC ?= gcc/HOSTCC := clang/' Makefile
+        sed -i 's/-Werror//g' Makefile
         make
         export PATH="/home/runner/work/android_kernel_asus_zenfone9/android_kernel_asus_zenfone9/kernel_build_tools/platform_external_dtc:$PATH"
         cd ..
