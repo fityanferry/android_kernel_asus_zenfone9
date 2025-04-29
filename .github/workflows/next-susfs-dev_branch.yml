@@ -1,4 +1,4 @@
-name: 22.04
+name: next-susfs-dev branch
 
 on:
   workflow_dispatch:
