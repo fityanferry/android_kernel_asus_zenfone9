@@ -26,7 +26,7 @@ jobs:
         sudo apt install -y gcc-9 g++-9
 
         # clang
-        wget https://mirrors.edge.kernel.org/pub/tools/llvm/files/llvm-19.1.6-x86_64.tar.gz
+        wget https://mirrors.edge.kernel.org/pub/tools/llvm/files/llvm-19.1.6-x86_64.tar.gz > /dev/null 2>&1
         tar -xvzf llvm-19.1.6-x86_64.tar.gz
 
         # dtc
